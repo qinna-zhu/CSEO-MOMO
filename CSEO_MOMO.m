@@ -201,7 +201,7 @@ while NFE <= MaxNFE
             CR_new = CR + cauchyMutation(scale_param_CR);
             F_new= max(0.4, min(2, F_new));
             CR_new= max(0, min(1, CR_new));
-           if  ii==1 || flag_num==0
+           if  ii==1
                 based_vector=hx(1,:);
            elseif ii==2 
                 based_vector=muta_best;
