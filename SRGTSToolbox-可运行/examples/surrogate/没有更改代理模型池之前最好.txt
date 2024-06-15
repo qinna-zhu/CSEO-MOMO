@@ -1,0 +1,521 @@
+%https://github.com/h-hg/DDEA/blob/master/ESA/ESA.m
+%先进行  进行代理模型 建模 使用数据库中所有样本  建模时间日益增加
+%顺序进行策略的选择  ---在复杂函数上表现不佳  原因  勘探进行的不够  
+%从建模方式入手 从当前粒子的领域构建代理模型   
+%构建代理的样本需要进一步的琢磨和研究 确实会影算法精度
+%构建代理模型得样本  大小  怎么构建呢？是构建同构还是异构得代理？
+
+%F1   30D 3.530654e-04   50D 3.051185e-01
+%F2   30D 2.648032e+01
+%F4   50D 1.206370e-02
+%F10  30D -3.812524e+01
+%F16 30D 4.397401e+02
+%F19  30D 9.459014e+02
+
+
+%F1  30D   3.358877e-03   1.220888e-07(1500的)
+%F2  30D 2.832952e+01    
+%F3 30D 2.790061e-02      5.278394e-04（如果是评价次数1500）   50D   1.325853e-02(p评价次数)
+%F4  30D 4.890774e-02
+
+
+
+%F1  30D 先2-0-1 4.336884e-02    50D 2.748300e+00    100D  9.066349e+01
+%F2  50D     100D 5.668142e+02
+%F3  30D 7.289115e-02   50D 8.846470e-02
+%F4   50D 2.015219e-03  100D 2.125418e-01
+%F5   30D  -1.154152e+02  50D 6.217619e+01
+%F6 30D  整后面平掉 5.000365e+02  
+%F19 50D  30D  9.493398e+02 （如果停滞100代就使用随机样本构建代理）   9.598068e+02(动作1和4随机选择样本构建代理)
+%9.368521e+02（动作2 3 随机构建样本代理）  50D 1.022797e+03 
+
+
+
+%% This is code of ESA written by Huixiang Zhen, please refer all questions, comments, bug reports, etc. to zhenhuixiang@cug.edu.cn
+function [hx,hf,NFE,MaxNFE,Archive_FEs,Archive_convergence] = RL_DSAEA_7(FUN,Dim,L_bound,U_bound)
+% Parameters setting
+NFE = 0;
+MaxNFE = 1500;                    
+Archive_FEs = zeros(MaxNFE,2);  
+Archive_convergence = zeros(1,MaxNFE);   
+show = 1; % show evaluated candidate each FE
+flag_num=0; %最优解累积多少次未更新 
+repeat_num=0; %产生的新解重复
+% Initial LHS samples
+if Dim < 100
+    initial_sample_size = 100;  
+    NP=50;
+elseif Dim >= 100
+    initial_sample_size = 150;   
+    NP=100;
+end
+%拉丁超立方体进行种群初始化
+sam = repmat(L_bound,initial_sample_size,1)+(repmat(U_bound,initial_sample_size,1)-repmat(L_bound,initial_sample_size,1)).*lhsdesign(initial_sample_size,Dim);
+fit = zeros(1,initial_sample_size);
+for i=1:initial_sample_size
+    fit(i) = FUN(sam(i,:)); 
+    NFE = NFE+1;
+    Archive_FEs(NFE,:) = [NFE,fit(i)]; 
+    Archive_convergence(1,i) = min(Archive_FEs(1:NFE,2));
+end
+
+% Build database  建立数据库
+hx = sam; hf = fit;                                             
+[~,sidx] = sort(hf);                                         
+hx = hx(sidx,:);  hf = fit(sidx);  % history data
+
+% DE parameters for action 1
+% NP = 50;
+F=0.5;
+CR=0.9;
+
+% Samples number of local surrogate models for action 2-4
+ls = 25 + Dim;  ls = min([ls,60]);
+ls2 = 100; 
+
+% RL parameters and initialization  初始化强化学习参数
+alp = 0.1;                   
+gamma = 0.9;   
+Q_Agent = [ 0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;
+            0.25 0.25 0.25 0.25;];
+State = 1; 
+Action = 1; 
+        
+% number of calling sampling Actions    执行动作
+Action1 = 0;
+Action2 = 0;
+Action3 = 0;
+Action4 = 0;
+
+kk=2;
+candidate_best=[];
+train_hx=[];
+train_hf=[];
+% Main loop
+while NFE <= MaxNFE
+  
+    % Update state and action 
+    R = 0; action_success = 0;
+    Qvalue1 = Q_Agent(State,:); 
+    temp = exp(Qvalue1);
+    ratio = cumsum(temp)/sum(temp); 
+    jtemp = find(rand(1)<ratio);
+    Action = jtemp(1); 
+    
+
+    % Agent log 
+    log_Q_Agent{NFE} = Q_Agent;
+    log_State{NFE} = State;
+    log_ratio{NFE} = ratio;
+    log_Action{NFE} = Action;
+    disp(['NFE: ' num2str(NFE) ' Action:' num2str(Action)] ); 
+   
+    
+%     if flag_num>=50
+%         train_hx=[];
+%         train_hf=[];
+%         for ii=1:length(hf)
+%             if rand(1)<0.5
+%                 train_hx=[train_hx;hx(ii,:)];
+%                 train_hf=[train_hf,hf(ii)];
+%             end
+%         end
+%         DS_train=length(train_hf);
+%     else
+%         train_hx=hx(1:initial_sample_size,:);  train_hf=hf(1:initial_sample_size);
+%         DS_train = initial_sample_size;
+%     end
+%      if Action==2 ||Action==3
+%         train_hx=[];
+%         train_hf=[];
+%         for ii=1:length(hf)
+%             if rand(1)<0.5
+%                 train_hx=[train_hx;hx(ii,:)];
+%                 train_hf=[train_hf,hf(ii)];
+%             end
+%         end
+%         DS_train=length(train_hf);
+%     else
+%         train_hx=hx(1:initial_sample_size,:);  train_hf=hf(1:initial_sample_size);
+%         DS_train = initial_sample_size;
+%      end  
+    
+    if kk==0||kk==1 || isempty(train_hx)
+        if length(hf)<2*initial_sample_size
+        train_hx=hx(1:initial_sample_size,:);  train_hf=hf(1:initial_sample_size);
+        DS_train = initial_sample_size;
+    else
+        train_hx=hx(1:2*initial_sample_size,:);  train_hf=hf(1:2*initial_sample_size);
+        DS_train = 2*initial_sample_size;
+    end
+%         train_hx=hx(1:initial_sample_size,:);  train_hf=hf(1:initial_sample_size);
+%         DS_train = initial_sample_size;
+    end
+kk
+    
+
+    %% 执行action%%
+    % Execute action and obtain new data
+    if Action == 1         %建立RBF1，使用RBF1进行近似适应度评估
+        % Action 1: Surrogate screening     
+        Action1 = Action1 + 1; 
+%         train_hx=hx;  train_hf=hf;
+%         DS_train = length(train_hf);
+      
+ %       train_hx=hx(1:initial_sample_size,:);  train_hf=hf(1:initial_sample_size);
+%       DS_train = initial_sample_size; 
+
+
+        % RBF parameters
+        ghxd=real(sqrt(train_hx.^2*ones(size(train_hx'))+ones(size(train_hx))*(train_hx').^2-2*train_hx*(train_hx')));
+        spr=max(max(ghxd))/(Dim*DS_train)^(1/Dim);
+        
+        %  build RBF network
+        i =Action;
+        h = 4*(i-1);
+        spr= spr * 2^h;
+        net=newrbe(train_hx',train_hf,spr);
+        RBF_FUN=@(x) sim(net,x');              
+       
+    elseif  Action == 2     
+        % Action 2:  建立RBF2，使用RBF2进行近似适应度评估
+        Action2 = Action2 + 1;
+        
+        
+% %         flag='cubic';
+% %         [lambda, gamma]=RBF(train_hx,train_hf',flag);
+% %         RBF_FUN=@(x) RBF_eval(x,train_hx,lambda,gamma,flag); % 构建源空间RBF模型
+
+        
+        % RBF parameters
+        ghxd=real(sqrt(train_hx.^2*ones(size(train_hx'))+ones(size(train_hx))*(train_hx').^2-2*train_hx*(train_hx')));
+        spr=max(max(ghxd))/(Dim*DS_train)^(1/Dim);
+        %  build RBF network
+        i =Action;
+        h = 4*(i-1);
+        spr= spr * 2^h;
+        net=newrbe(train_hx',train_hf,spr);
+        RBF_FUN=@(x) sim(net,x');
+        
+    elseif  Action == 3      
+        % Action 3: 建立RBF3，使用RBF2进行近似适应度评估
+        Action3 = Action3 + 1;
+        
+%         train_hx=hx(1:initial_sample_size,:);  train_hf=hf(1:initial_sample_size);
+%         DS_train = initial_sample_size;
+        
+        % RBF parameters
+        ghxd=real(sqrt(train_hx.^2*ones(size(train_hx'))+ones(size(train_hx))*(train_hx').^2-2*train_hx*(train_hx')));
+        spr=max(max(ghxd))/(Dim*DS_train)^(1/Dim);
+        %  build RBF network
+        i =Action;
+        h = 4*(i-1);
+        spr= spr * 2^h;
+        net=newrbe(train_hx',train_hf,spr);
+        RBF_FUN=@(x) sim(net,x');
+        
+    elseif  Action == 4      
+        % Action 4: 建立RBF4，使用RBF4进行近似适应度评估
+        Action4 = Action4 + 1;
+%         train_hx=hx(1:initial_sample_size,:);  train_hf=hf(1:initial_sample_size);
+%         DS_train = initial_sample_size;
+           
+        % RBF parameters
+        ghxd=real(sqrt(train_hx.^2*ones(size(train_hx'))+ones(size(train_hx))*(train_hx').^2-2*train_hx*(train_hx')));
+        spr=max(max(ghxd))/(Dim*DS_train)^(1/Dim);
+        %  build RBF network
+        i =Action;
+        h = 4*(i-1);
+        spr= spr * 2^h;
+        net=newrbe(train_hx',train_hf,spr);
+        RBF_FUN=@(x) sim(net,x');     
+%         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% update agent
+% 
+%         State_Next = 2*Action+action_success-1;
+%         temp = max(Q_Agent(State_Next,:));
+%         Q_Agent(State,Action) = (1-alp)*Q_Agent(State, Action)+alp*(R+gamma*temp);
+%         State = State_Next;
+%         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% update agent
+        continue;
+    end
+
+    %% 子代生成  真实评估
+%     kk
+%     repeat_num
+    if  kk==0
+         kk=1;
+        %策略1： 求解当前代理模型的最优值  倾向于开采 极速开采
+        [~, id] = sort(hf);
+        lhx = hx(id(1:ls),:); lhf = hf(id(1:ls));
+        a1 = 100;
+        % obtain candidate
+        Max_NFE = a1*Dim+1000; minerror = 1e-20;   %%  可以改变lhx
+        
+        [candidate_position,~] = JADE(Dim, Max_NFE,RBF_FUN, minerror, lhx); % find a optimum of surrogate model by optimizer
+        candidate_best=candidate_position;   
+        
+
+        
+    elseif kk==1  
+     %   kk=2;
+        %策略2  DE算法生成子代   这里的维数小于100时NP=50 否则100  均衡开发和勘探的
+        LB = repmat((L_bound),NP,1);
+        UB = repmat((U_bound),NP,1);
+        P = hx(1:NP,:);
+        U = DEoperating(P,NP,Dim,hx,F,CR,UB,LB);
+       %U = DE_rand(P,NP,Dim,hx,F,CR,UB,LB);
+        % obtain candidate
+        fitnessModel =RBF_FUN(U);
+        [~,sidx] = sort(fitnessModel);
+        candidate_position = U(sidx(1),:); %获得近似适应度值排名最好的解
+        
+
+           
+    elseif kk==2   
+     %   kk=0;
+        %策略3 用fullcorss个人感觉更倾向于局部开采
+        %随机生成种群向代理模型最优值
+%       kk=0;
+        n=length(hf);
+        % b=2:1:n;  %mat=start:step:end，结果包括end，step如果是1的话，可以省略
+        m=NP;
+        rand_index = randperm(n);%将序号随机排列
+        draw_rand_index = rand_index(1:m);%取出前m个序号
+        
+        %取策略1中的代理模型的最优值作为最优基向量
+        if isempty(candidate_best)~=1
+            muta_best=candidate_best;
+        else
+            muta_best=hx(1,:);
+        end
+%         [~, id] = sort(hf);
+%         lhx = hx(id(1:ls),:); lhf = hf(id(1:ls));
+%         a1 = 100;
+%         % obtain candidate
+%         Max_NFE = a1*Dim+1000; minerror = 1e-20;   %%  可以改变lhx
+%         [candidate_position,~] = JADE(Dim, Max_NFE,RBF_FUN, minerror, lhx); % find a optimum of surrogate model by optimizer
+%         candidate_best=candidate_position;
+%         muta_best=candidate_best;
+        %选择hx一部分种群向最优向量变异   
+        %       P = hx(id(1:NP),:); lhf = hf(id(1:NP));
+        LB = repmat((L_bound),NP,1);
+        UB = repmat((U_bound),NP,1);
+        P = hx(draw_rand_index,:); lhf = hf(draw_rand_index);
+       % U=full_crossover(F, P,muta_best);
+        U =DEoperating(P,NP,Dim,muta_best,F,CR,UB,LB);
+
+
+        % -利用当前试验总体的邻域构建RBF模型
+        NS=2*(Dim+1);    %选择种群中每个个体的2D+1个个体进行训练 dim是原空间维度    % *** 算法性能参数 ***
+        %         hx = hx(:,1:Dim);
+        %         hf = hx(:,end);  %数据库样本和当前试探种群的距离矩阵
+        phdis=real(sqrt(U.^2*ones(size(hx'))+ones(size(U))*(hx').^2-2*U*(hx')));
+        [~,sidx]=sort(phdis,2);                        % 每行都进行排序
+        nidx=sidx; nidx(:,NS+1:end)=[];                % 个体的近邻样本指标集矩阵
+        nid=unique(nidx);     %去重  得到包围试探种群的训练样本  用整个训练样本训练RBF
+        train_hx=hx(nid,:);   train_hf=hf(nid);
+        
+        % obtain candidate
+        fitnessModel =RBF_FUN(U);
+        U_best=find(fitnessModel< hf(1));
+        if isempty(U_best)~=1    % judge Repeat Sample    假如ih为空的话,返回的值是1
+            candidate_position = U(U_best,:);
+        else
+            [~,sidx] = sort(fitnessModel);
+            candidate_position = U(sidx(1),:); %获得近似适应度值排名最好的解
+        end
+        
+
+
+% %选择hx一部分种群向最优向量变异  一部分一部分
+%         FP=[];MP=[];
+%         %现在种群P
+%         N1=round(NP*0.9);
+%         if mod(N1,2)~=0
+%             N1=N1-1;
+%         end
+%         N2=round(NP*0.1);
+%         P = hx(draw_rand_index,:);   %P从数据库中轮盘赌
+%        index_MP=randi(initial_sample_size,1,N1/2);  %生成N1/2个1到initial_sample_size之间的整数
+%        MP=[MP;hx(index_MP,:)];
+%         for i=1:2:N1   %这个for循环的意思是i从1到n1   按2递增
+%             FP = [FP; P(i,:)];
+% %             MP= [MP; P(i + 1,:)];
+%         end    
+%         child=zeros(N1,Dim);
+%         for i=1:N1/2
+%             % r=randi([1,Dim],1,1);
+%             for n=1:Dim
+%                 if (randi(1)<=CR)
+%                     %child1(i,n)=PFP(i,n);
+%                     child1(i,n)=candidate_best(n);
+%                     child2(i,n)=MP(i,n);
+%                 else
+%                     child1(i,n)=MP(i,n);
+%                     child2(i,n)=candidate_best(n);
+%                     %child2(i,n)=candidate_position(n);
+%                     %child2(i,n)=PFP(i,n);
+%                 end
+%             end
+%         end
+%         child=[child1;child2];
+%         %变异
+%         for i=1:N2
+%             j=randi([1 N1]);
+%             for k=1:Dim
+%                 if randi(1)<0.1
+%                     child(j,k) =L_bound(1) + (U_bound(1)-L_bound(1))* randi(1);
+%                 end
+%             end
+%         end   
+%         % obtain candidate
+%         fitnessModel =RBF_FUN(child);
+%         [~,sidx] = sort(fitnessModel);
+%         candidate_position = child(sidx(1),:); %获得近似适应度值排名最好的解 
+%最优向量进行变异
+% for k=1:Dim
+%     if randi(1)<0.1
+%         candidate_position(k) =L_bound(1) + (U_bound(1)-L_bound(1))* randi(1);
+%     end
+% end
+
+% %全交叉变异
+% %         lhx = hx(draw_rand_index,:); lhf = hf(draw_rand_index);
+% %         [candidate_position] = full_crossover(RBF_FUN,lhx,candidate_best);
+%     elseif kk==4
+%         [lhf, id] = sort(hf);
+%         lhx = hx(id(1:ls2),:); lhf = hf(id(1:ls2));
+%         
+%         [newdata_x, newdata_f] = STR(FUN,lhx,lhf);
+%         % Update database and display
+%         num_c = size(newdata_f,1);
+%         for a = 1:num_c
+%             NFE = NFE + 1;
+%             candidate_position = newdata_x(a,:);
+%             candidate_fit = newdata_f(a);
+%             if show
+%                 disp(['  Fitness = ' num2str(candidate_fit) ' Solution = ' num2str(candidate_position) ]);
+%             end
+%             hx = [hx; candidate_position];  hf = [hf, candidate_fit];
+%             [hf,idx] = sort(hf);
+%             hx = hx(idx,:);
+%         end
+%         Archive_FEs(NFE,:) = [NFE,candidate_fit];
+%         Archive_convergence(1,NFE) = min(Archive_FEs(1:NFE,2));
+
+    end
+  %% Update database and display 更新数据库
+        [~,ih,~] = intersect(hx,candidate_position,'rows');  %这个函数是返回hx candidate_position的交集，ih返回的是 交集 所在hx数组的指标
+        if isempty(ih)~=1    % judge Repeat Sample    假如ih为空的话,返回的值是1
+            disp(['Sample repeat and delete it']);
+            repeat_num= repeat_num+1;
+            if (repeat_num>=10)
+                if kk==0
+                    kk=1;
+                elseif kk==1
+                    kk=2;
+                elseif kk==2
+                    kk=0;
+                end
+            continue;
+        else
+
+            repeat_num= 0;
+            end
+        end
+
+        candidate_fit = FUN(candidate_position);  %进行真实评估
+        for aa=1:size(candidate_fit,1)
+            Archive_FEs(NFE,:) = [NFE,candidate_fit(aa)];
+            Archive_convergence(1,NFE) = min(Archive_FEs(1:NFE,2));
+            NFE =  NFE +1;
+        end
+  
+%         if show
+%             disp(['  Fitness = ' num2str(candidate_fit) ' Solution = ' num2str(candidate_position) ]);
+%         end
+        hx = [hx; candidate_position];  hf = [hf, candidate_fit];   %将真实评估的点加入到数据库中
+        [hf,sidx] = sort(hf);    %sidx是根据适应度值排序后的index
+        hx = hx(sidx,:);  
+         
+    %% 更新
+    if  sum(candidate_fit <= hf(1))>=1
+        action_success = 1; R = 1;   %最优解更新奖励1
+        flag_num=0;   
+        disp(['  Best fitness(Action ' num2str(Action)  ') = ' num2str( hf(1)) ' NFE=' num2str(NFE)]);
+
+    else
+        if RBF_FUN(candidate_position)<=hf(1)
+            action_success =1;R=0.5;    %提供了一个良好的方向  0.5
+        end
+        
+        if flag_num>=30
+            action_success = -1;   %如果一直没改进  -1
+        end
+        flag_num=flag_num+1;
+        disp([ ' NFE=' num2str(NFE) 'candidate_fit >= hf(1)']); 
+    end
+    if (flag_num>=20 )||(repeat_num>=20)
+        if kk==0  
+            kk=1;
+        elseif kk==1
+            kk=2;
+        elseif kk==2
+            kk=0;
+        end
+       disp([ 'flag_num=' num2str(flag_num)]); 
+    else
+%         kk=4;
+    end
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% update agent
+    State_Next = 4*(Action-1)+action_success*1+2^kk+1 
+    %State_Next = 2*Action+action_success-1;  %假设现在动作是1并且找到更好的值  下一状态就是2*1+1-1=s2    状态s1、s3、s5和s7分别表示了进行了先前执行a1、a2、a3和a4操作后没有获得更好的代理模型
+    %假设现在动作是1没有找到更好的值  下一状态就是2*1+0-1=s1   
+    temp = max(Q_Agent(State_Next,:)) ;%找到这个状态对应的Q表中的最大值 
+    Q_Agent(State,Action) = (1-alp)*Q_Agent(State, Action)+alp*(R+gamma*temp);
+    State = State_Next;  
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% update agent
+end
+
+    function sample = Monte_Carlo(sample, n, sensitive, L_bound, U_bound)    
+        P_size = NP* Dim * 10; %在搜索空间随机生成大量样本点个数
+        P_rand = repmat(L_bound,  P_size , 1) + rand( P_size , n) .* (repmat(U_bound - L_bound,  P_size , 1));
+        part = partition(P_rand, sample);
+        local_area = [];
+        for p=1:length(sensitive)
+            local_area = [local_area; part{sensitive(p)}];   %Ctop区域
+        end
+        m = size(local_area, 1) ; %返回的是矩阵local_area所对应的行数
+        local_area_fitnessModel= zeros(m, 1);
+        for i=1:m
+            local_area_fitnessModel(i) = RBF_FUN(local_area(i,:));
+        end    
+        [~, index_new] = min(local_area_fitnessModel);
+        sample = local_area(index_new, :); 
+    end
+
+    function part = partition(P, c)      
+        ds = pdist2(c, P);
+        [~, index] = min(ds, [], 1);
+        N = size(c, 1);
+        part = cell(1, N);
+        for i=1:N
+            part{i} = P(find(index==i), :);
+        end
+    end
+end
