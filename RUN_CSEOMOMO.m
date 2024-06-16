@@ -26,8 +26,8 @@ gsamp1_log  = log10(gsamp1_ave);
 gsamplog    = log10(gsamp1);  
 
 %%plot
-figure(1)   %画第几个函数图 fun_num
-y(:,1)=mean(gsamp1,1);  %按列求均值
+figure(1)   
+y(:,1)=mean(gsamp1,1);  
 Max_FES=1000
 xx=1:round(Max_FES/10):Max_FES;
 xx(11)=Max_FES;
@@ -36,7 +36,7 @@ p1=plot(xx,tempy(xx),'^-','Color',[1,0,0]);
 Dim=num2str(D);
 
 
-title1=strcat(fname,Dim,'D_收敛曲线')
+title1=strcat(fname,Dim,'D_convergence_curve')
 title(title1)
 
 
