@@ -3,7 +3,7 @@ clc;
 clear;
 warning('off');
 addpath(genpath(pwd));
-fun={'ELLIPSOID'; 'ROSENBROCK'; 'ACKLEY'; 'GRIEWANK'; 'RASTRIGIN';'CEC05_f10';'CEC05_f19';};% The objective functions to be tested
+fun={'ellipsoid';'rosenbrock';'ackley';  'griewank';'CEC05_F10';'rastrigin';'CEC05_F19';'CEC05_F16'}% The objective functions to be tested
 dims = [30 50 100 200];                    % Dimensions to be tested
 Runs = 20;                                 % Number of runs
 d = size(dims,2);

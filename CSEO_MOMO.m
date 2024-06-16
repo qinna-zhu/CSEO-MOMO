@@ -201,13 +201,13 @@ while NFE <= MaxNFE
             CR_new = CR + cauchyMutation(scale_param_CR);
             F_new= max(0.4, min(2, F_new));
             CR_new= max(0, min(1, CR_new));
-           if  ii==1
+           if  ii==1 
                 based_vector=hx(1,:);
            elseif ii==2 
                 based_vector=muta_best;
            else
                based_vector=temp;    
-               numIndividualsToReinit=randi(NP/2);
+               numIndividualsToReinit=NP/2; 
                 for iii = 1:numIndividualsToReinit
                     overallMinValue_array = ones(1, Dim) * overallMinValue;  
                     overallMaxValue_array = ones(1, Dim) * overallMaxValue;
@@ -220,7 +220,7 @@ while NFE <= MaxNFE
     fitnessModel=Model_FUN(U1);
     [~,sidx] = sort(fitnessModel);
     
-    rand_num= size(U1,2);
+    rand_num= size(U1,1);
     pop_rank=U1(sidx(1:rand_num),:);
     if rand_num>1
         mean_pop=mean(pop_rank);
@@ -235,7 +235,7 @@ while NFE <= MaxNFE
         if dx5>dlta && Model_FUN(mean_pop)<fitnessModel(1)
             candidate_position=[candidate_position;mean_pop];
         end
-        if  fitnessModel(sidx(1))<hf(1)  
+        if  fitnessModel(sidx(1))<hf(1)  && dx1>dlta
             candidate_position=[candidate_position;U1(sidx(1),:)];
         end
         
@@ -265,7 +265,7 @@ while NFE <= MaxNFE
     fitness2=fitness(losers);
     F_new= F ;%+ cauchyMutation(scale_param_F);
     CR_new = CR; %+ cauchyMutation(scale_param_CR);
-    U2=DE_update_rand(P2,NP/2,Dim,P1,F_new,CR_new,UB,LB,P);
+    U2=DE_update_rand(P2,NP/2,Dim,P(winners,:),F_new,CR_new,UB,LB,P);
 
     fitnessModel=Model_FUN(U2);
     [~,sidx] = sort(fitnessModel);
@@ -282,9 +282,9 @@ while NFE <= MaxNFE
         end
         if candidate_position_size==0
             for jj=1:NP/2
-                dx2=min(sqrt(sum((repmat(U2(sidx(ii),:),size(hx,1),1)-hx).^2,2)));
-                if dx2 > dlta && fitnessModel(sidx(ii))<hf(ii)
-                    candidate_position=U2(sidx(ii),:);
+                dx2=min(sqrt(sum((repmat(U2(sidx(jj),:),size(hx,1),1)-hx).^2,2)));
+                if  fitnessModel(sidx(jj))<fitness1(jj) 
+                    candidate_position=U2(sidx(jj),:);
                     candidate_position_size=candidate_position_size+1;
                     candidate_fit = FUN(candidate_position);
                     Archive_FEs(NFE,:) = [NFE,candidate_fit];
@@ -304,7 +304,6 @@ while NFE <= MaxNFE
             R=5;
             flag_num=0;
             repeat_num= 0;
-           % disp(['  Best fitness(Action ' num2str(Action)  ') = ' num2str( min(hf)) ' NFE=' num2str(NFE)]);
         else
             action_success = 0; 
             %R=0;
@@ -342,3 +341,4 @@ end
         POP=lhsdesign(n,c).*(ones(n,1).*(bu-bd))+ones(n,1).*bd;    
     end
 end
+

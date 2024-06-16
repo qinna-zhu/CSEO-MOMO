@@ -2,13 +2,13 @@
 %% Test functions' variable domain
 function [Xmin, Xmax] = variable_domain(fname)
     switch fname
-        case 'GRIEWANK'
+        case 'griewank'
             Xmin=-600; Xmax=600;
-        case 'ACKLEY'
+        case 'ackley'
             Xmin=-32.768; Xmax=32.768;
-        case 'ROSENBROCK'
+        case 'rosenbrock'
             Xmin=-2.048; Xmax=2.048;
-        case 'ELLIPSOID'
+        case 'ellipsoid'
             Xmin=-5.12; Xmax=5.12;
         case 'CEC05_F10'
             Xmin=-5; Xmax=5;

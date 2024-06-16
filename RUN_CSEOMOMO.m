@@ -25,12 +25,33 @@ gsamp1_ave  = mean(gsamp1,1);
 gsamp1_log  = log10(gsamp1_ave);   
 gsamplog    = log10(gsamp1);  
 
+%%plot
+figure(1)   %画第几个函数图 fun_num
+y(:,1)=mean(gsamp1,1);  %按列求均值
+Max_FES=1000
+xx=1:round(Max_FES/10):Max_FES;
+xx(11)=Max_FES;
+tempy=log10(y(:,1));
+p1=plot(xx,tempy(xx),'^-','Color',[1,0,0]);
+Dim=num2str(D);
+
+
+title1=strcat(fname,Dim,'D_收敛曲线')
+title(title1)
+
+
+
+xlabel('评价次数');
+ylabel('适应度函数值（log）');
+% fig_name=strcat('NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D),'D_收敛曲线')
+% title(fig_name)
 
 % Time Complexity
 time_cost = toc(time_begin);
 time_cost = time_cost/runs;
-
-
-save(strcat('result\','NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D)));
-
+save result
+%save(strcat('E:\\研究生\\课题\\专利\\代码\\RL_DSAEA_3\\result\\30D_onlyDEcunrrentbest\\','NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D)));
+save(strcat('F:\博士生\课题\CSEO-MOMO(share)\result\','NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D)));
+path=strcat('F:\博士生\课题\CSEO-MOMO(share)\result\',title1,'.fig');
+savefig(path) 
 end
