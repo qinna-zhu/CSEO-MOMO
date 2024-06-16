@@ -26,8 +26,8 @@ gsamp1_log  = log10(gsamp1_ave);
 gsamplog    = log10(gsamp1);  
 
 %%plot
-figure(1)   %»­µÚ¼¸¸öº¯ÊıÍ¼ fun_num
-y(:,1)=mean(gsamp1,1);  %°´ÁĞÇó¾ùÖµ
+figure(1)   %ç”»ç¬¬å‡ ä¸ªå‡½æ•°å›¾ fun_num
+y(:,1)=mean(gsamp1,1);  %æŒ‰åˆ—æ±‚å‡å€¼
 Max_FES=1000
 xx=1:round(Max_FES/10):Max_FES;
 xx(11)=Max_FES;
@@ -36,22 +36,22 @@ p1=plot(xx,tempy(xx),'^-','Color',[1,0,0]);
 Dim=num2str(D);
 
 
-title1=strcat(fname,Dim,'D_ÊÕÁ²ÇúÏß')
+title1=strcat(fname,Dim,'D_æ”¶æ•›æ›²çº¿')
 title(title1)
 
 
 
-xlabel('ÆÀ¼Û´ÎÊı');
-ylabel('ÊÊÓ¦¶Èº¯ÊıÖµ£¨log£©');
-% fig_name=strcat('NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D),'D_ÊÕÁ²ÇúÏß')
+xlabel('è¯„ä»·æ¬¡æ•°');
+ylabel('é€‚åº”åº¦å‡½æ•°å€¼ï¼ˆlogï¼‰');
+% fig_name=strcat('NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D),'D_æ”¶æ•›æ›²çº¿')
 % title(fig_name)
 
 % Time Complexity
 time_cost = toc(time_begin);
 time_cost = time_cost/runs;
 save result
-%save(strcat('E:\\ÑĞ¾¿Éú\\¿ÎÌâ\\×¨Àû\\´úÂë\\RL_DSAEA_3\\result\\30D_onlyDEcunrrentbest\\','NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D)));
-save(strcat('F:\²©Ê¿Éú\¿ÎÌâ\CSEO-MOMO(share)\result\','NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D)));
-path=strcat('F:\²©Ê¿Éú\¿ÎÌâ\CSEO-MOMO(share)\result\',title1,'.fig');
+
+save(strcat('\result\','NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D)));
+path=strcat('\result\',title1,'.fig');
 savefig(path) 
 end
