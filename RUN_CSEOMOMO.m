@@ -41,8 +41,8 @@ title(title1)
 
 
 
-xlabel('评价次数');
-ylabel('适应度函数值（log）');
+xlabel('fes');
+ylabel('fitness（log）');
 % fig_name=strcat('NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D),'D_收敛曲线')
 % title(fig_name)
 
