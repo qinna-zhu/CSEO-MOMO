@@ -227,6 +227,9 @@ while NFE <= MaxNFE
     else
         mean_pop=pop_rank;
     end
+
+    bestU1=U1(sidx(1),:);
+    fitnessModelU1=fitnessModel(sidx(1));
      
     dx1=min(sqrt(sum((repmat(U1(sidx(1),:),size(hx,1),1)-hx).^2,2)));
     dx5=min(sqrt(sum((repmat(mean_pop,size(hx,1),1)-hx).^2,2)));
@@ -281,17 +284,27 @@ while NFE <= MaxNFE
             hx = [hx; candidate_position];  hf = [hf, candidate_fit];
         end
         if candidate_position_size==0
-            for jj=1:NP/2
-                dx2=min(sqrt(sum((repmat(U2(sidx(jj),:),size(hx,1),1)-hx).^2,2)));
-                if  fitnessModel(sidx(jj))<fitness1(jj) 
-                    candidate_position=U2(sidx(jj),:);
-                    candidate_position_size=candidate_position_size+1;
-                    candidate_fit = FUN(candidate_position);
-                    Archive_FEs(NFE,:) = [NFE,candidate_fit];
-                    Archive_convergence(1,NFE) = min(Archive_FEs(1:NFE,2));
-                    NFE =  NFE +1;
-                    hx = [hx; candidate_position];  hf = [hf, candidate_fit];
-                    break;
+            if  fitnessModelU1<hf(1)
+                candidate_position= bestU1;
+                candidate_position_size=candidate_position_size+1;
+                candidate_fit = FUN(candidate_position);
+                Archive_FEs(NFE,:) = [NFE,candidate_fit];
+                Archive_convergence(1,NFE) = min(Archive_FEs(1:NFE,2));
+                NFE =  NFE +1;
+                hx = [hx; candidate_position];  hf = [hf, candidate_fit];
+            else
+                for jj=1:NP/2
+                    dx2=min(sqrt(sum((repmat(U2(sidx(jj),:),size(hx,1),1)-hx).^2,2)));
+                    if  fitnessModel(sidx(jj))<fitness1(jj)
+                        candidate_position=U2(sidx(jj),:);
+                        candidate_position_size=candidate_position_size+1;
+                        candidate_fit = FUN(candidate_position);
+                        Archive_FEs(NFE,:) = [NFE,candidate_fit];
+                        Archive_convergence(1,NFE) = min(Archive_FEs(1:NFE,2));
+                        NFE =  NFE +1;
+                        hx = [hx; candidate_position];  hf = [hf, candidate_fit];
+                        break;
+                    end
                 end
             end
         end
