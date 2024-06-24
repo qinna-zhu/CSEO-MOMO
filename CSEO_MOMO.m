@@ -264,7 +264,7 @@ while NFE <= MaxNFE
     UB = repmat((U_bound),NP,1);
     P2=P(losers,:);
     fitness2=fitness(losers);
-    U2=DE_update_rand(P2,NP/2,Dim,P(winners,:),F,CR,UB,LB,P);
+    U2=DE_mean_rand(P2,NP/2,Dim,P(winners,:),F,CR,UB,LB,P);
 
     fitnessModel=Model_FUN(U2);
     [~,sidx] = sort(fitnessModel);
