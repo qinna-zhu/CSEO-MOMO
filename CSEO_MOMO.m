@@ -60,8 +60,7 @@ Action2 = 0;
 Action3 = 0;
 Action4 = 0;
 Action_set=[];
-jiejue_set=[];
-jilu_score=zeros(1110,2);
+
 
 % Main loop
 while NFE <= MaxNFE
@@ -207,7 +206,7 @@ while NFE <= MaxNFE
                 based_vector=muta_best;
            else
                based_vector=temp;    
-               numIndividualsToReinit=NP/2; 
+               numIndividualsToReinit=ceil(((MaxNFE-NFE)/MaxNFE)*(NP/2)); 
                 for iii = 1:numIndividualsToReinit
                     overallMinValue_array = ones(1, Dim) * overallMinValue;  
                     overallMaxValue_array = ones(1, Dim) * overallMaxValue;
@@ -233,7 +232,6 @@ while NFE <= MaxNFE
      
     dx1=min(sqrt(sum((repmat(U1(sidx(1),:),size(hx,1),1)-hx).^2,2)));
     dx5=min(sqrt(sum((repmat(mean_pop,size(hx,1),1)-hx).^2,2)));
-    dx3=min(sqrt(sum((repmat(muta_best,size(hx,1),1)-hx).^2,2)));
     
         if dx5>dlta && Model_FUN(mean_pop)<fitnessModel(1)
             candidate_position=[candidate_position;mean_pop];
@@ -266,9 +264,7 @@ while NFE <= MaxNFE
     UB = repmat((U_bound),NP,1);
     P2=P(losers,:);
     fitness2=fitness(losers);
-    F_new= F ;%+ cauchyMutation(scale_param_F);
-    CR_new = CR; %+ cauchyMutation(scale_param_CR);
-    U2=DE_update_rand(P2,NP/2,Dim,P(winners,:),F_new,CR_new,UB,LB,P);
+    U2=DE_update_rand(P2,NP/2,Dim,P(winners,:),F,CR,UB,LB,P);
 
     fitnessModel=Model_FUN(U2);
     [~,sidx] = sort(fitnessModel);
@@ -284,7 +280,7 @@ while NFE <= MaxNFE
             hx = [hx; candidate_position];  hf = [hf, candidate_fit];
         end
         if candidate_position_size==0
-            if  fitnessModelU1<hf(1)
+            if  fitnessModelU1<hf(1) && (NFE/MaxNFE)>0.5
                 candidate_position= bestU1;
                 candidate_position_size=candidate_position_size+1;
                 candidate_fit = FUN(candidate_position);
