@@ -43,7 +43,7 @@ title(title1)
 
 xlabel('fes');
 ylabel('fitness（log）');
-% fig_name=strcat('NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D),'D_收敛曲线')
+% fig_name=strcat('NFE',num2str(mf),'_',fname,' runs=',num2str(runs),' Dim=',num2str(D),'D_convergence_curve')
 % title(fig_name)
 
 % Time Complexity
