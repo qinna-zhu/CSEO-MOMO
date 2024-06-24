@@ -291,7 +291,7 @@ while NFE <= MaxNFE
             else
                 for jj=1:NP/2
                     dx2=min(sqrt(sum((repmat(U2(sidx(jj),:),size(hx,1),1)-hx).^2,2)));
-                    if  fitnessModel(sidx(jj))<fitness1(jj)
+                    if  fitnessModel(sidx(jj))<fitness1(jj) && dx2>dlta
                         candidate_position=U2(sidx(jj),:);
                         candidate_position_size=candidate_position_size+1;
                         candidate_fit = FUN(candidate_position);
