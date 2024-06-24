@@ -1,5 +1,5 @@
 % DEoperating consist of mutation and crossover
-function [U] = DE_update_rand(P,NP,Dim,hisx,F,CR,UB,LB,center)
+function [U] = DE_mean_rand(P,NP,Dim,hisx,F,CR,UB,LB,center)
     for i=1:NP   
        k0=randi([1,NP]);
        while(k0==i)
