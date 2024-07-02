@@ -206,7 +206,7 @@ while NFE <= MaxNFE
                 based_vector=muta_best;
            else
                based_vector=temp;    
-               numIndividualsToReinit=ceil(((MaxNFE-NFE)/MaxNFE)*(NP/2)); 
+               numIndividualsToReinit=NP/2; 
                 for iii = 1:numIndividualsToReinit
                     overallMinValue_array = ones(1, Dim) * overallMinValue;  
                     overallMaxValue_array = ones(1, Dim) * overallMaxValue;
