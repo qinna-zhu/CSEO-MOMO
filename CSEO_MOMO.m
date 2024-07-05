@@ -1,10 +1,11 @@
-function [celue_save,hx,hf,NFE,MaxNFE,Archive_FEs,Archive_convergence,Action_set] = CSEO_MOMO(FUN,Dim,L_bound,U_bound)
+function [hx,hf,NFE,MaxNFE,Archive_FEs,Archive_convergence,Action_set] = CSEO_MOMO(FUN,Dim,L_bound,U_bound)
 % Parameters setting
 NFE = 0;
 MaxNFE = 1000;                    
 Archive_FEs = zeros(MaxNFE,2);  
 Archive_convergence = zeros(1,MaxNFE);   
 flag_num=0; %Number of stagnation
+stage_num=0;
 repeat_num=0; 
 % Initial LHS samples
 if Dim <100
@@ -24,7 +25,6 @@ for i=1:initial_sample_size
     Archive_convergence(1,i) = min(Archive_FEs(1:NFE,2));
 end
 dlta = min(sqrt(0.000001^2*Dim),0.00005*sqrt(Dim)*min(U_bound-L_bound));
-celue_save=[];
 % Build database  
 hx = sam; hf = fit;
 [~,sidx] = sort(hf);
@@ -206,7 +206,7 @@ while NFE <= MaxNFE
                 based_vector=muta_best;
            else
                based_vector=temp;    
-               numIndividualsToReinit=NP/2; 
+               numIndividualsToReinit=max(randi(NP/2),ceil(((MaxNFE-NFE)/MaxNFE)*(NP/2))); 
                 for iii = 1:numIndividualsToReinit
                     overallMinValue_array = ones(1, Dim) * overallMinValue;  
                     overallMaxValue_array = ones(1, Dim) * overallMaxValue;
@@ -279,31 +279,24 @@ while NFE <= MaxNFE
             NFE =  NFE +1;
             hx = [hx; candidate_position];  hf = [hf, candidate_fit];
         end
-        if candidate_position_size==0
-            if  fitnessModelU1<hf(1) && (NFE/MaxNFE)>0.5
-                candidate_position= bestU1;
-                candidate_position_size=candidate_position_size+1;
-                candidate_fit = FUN(candidate_position);
-                Archive_FEs(NFE,:) = [NFE,candidate_fit];
-                Archive_convergence(1,NFE) = min(Archive_FEs(1:NFE,2));
-                NFE =  NFE +1;
-                hx = [hx; candidate_position];  hf = [hf, candidate_fit];
-            else
-                for jj=1:NP/2
-                    dx2=min(sqrt(sum((repmat(U2(sidx(jj),:),size(hx,1),1)-hx).^2,2)));
-                    if  fitnessModel(sidx(jj))<fitness1(jj) && dx2>dlta
-                        candidate_position=U2(sidx(jj),:);
-                        candidate_position_size=candidate_position_size+1;
-                        candidate_fit = FUN(candidate_position);
-                        Archive_FEs(NFE,:) = [NFE,candidate_fit];
-                        Archive_convergence(1,NFE) = min(Archive_FEs(1:NFE,2));
-                        NFE =  NFE +1;
-                        hx = [hx; candidate_position];  hf = [hf, candidate_fit];
-                        break;
-                    end
-                end
-            end
+
+    if candidate_position_size==0 || stage_num>10
+        stage_num=stage_num+1;
+        if (fitnessModelU1<hf(1) &&  NFE>(MaxNFE/2))||stage_num>10
+            stage_num=0;
+            disp('cnadidate_position==0')
+            candidate_position= bestU1;
+            candidate_position_size=candidate_position_size+1;
+            candidate_fit = FUN(candidate_position);
+            Archive_FEs(NFE,:) = [NFE,candidate_fit];
+            Archive_convergence(1,NFE) = min(Archive_FEs(1:NFE,2));
+            NFE =  NFE +1;
+            hx = [hx; candidate_position];  hf = [hf, candidate_fit];
         end
+    else
+        stage_num=0;
+    end
+
 
    disp(['  Best fitness(Action ' num2str(Action)  ') = ' num2str(min(hf)) ' NFE=' num2str(NFE)]);
   %% Update database and display 
