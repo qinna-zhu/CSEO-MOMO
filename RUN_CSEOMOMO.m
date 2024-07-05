@@ -10,7 +10,7 @@ for r = 1:runs
     fprintf('\n');
     disp(['Fname:', fname,'  Run:', num2str(r)]);  
     fprintf('\n');
-    [celue_save,hisx,hisf,fitcount,mf,CE,gfs] =CSEO_MOMO(FUN,D,LB,UB); 
+    [hisx,hisf,fitcount,mf,CE,gfs] =CSEO_MOMO(FUN,D,LB,UB); 
     fprintf('Best fitness: %e\n',min(hisf)); 
     gsamp1(r,:) = gfs(1:mf);  
 end
